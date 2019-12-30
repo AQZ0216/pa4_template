@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
-include(ClangFormat)
 
 set(PROJECT_NAME cache_sim)
 project(${PROJECT_NAME} CXX)
@@ -19,8 +18,6 @@ set(CMAKE_CXX_COMPILER "clang++")
 
 file(GLOB SOURCES "src/*.cpp")
 file(GLOB HEADERS "src/*.hpp")
-clangformat_setup(${SOURCES} ${HEADERS})
 
 include_directories("${CMAKE_SOURCE_DIR}/include")
 add_executable(cache_sim ${SOURCES})
-add_dependencies(cache_sim clangformat)
