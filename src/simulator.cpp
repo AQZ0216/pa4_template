@@ -16,7 +16,9 @@ void Simulator::_SetupCache(const std::vector<CacheProperty> &_cfg_list) {
     // if (_multi_level) {
     //     TODO
     // } else {
+
     _cache_hierarchy_list.push_back(MainCache(_cfg_list[0]));
+
     // }
 }
 
@@ -57,34 +59,39 @@ bool Simulator::_CacheHandler(const inst_t &inst) {
     return true;
 }
 
+bool Simulator::_Access(const addr_t &addr) {
+    bool is_hit(false);
+    // if (_multi_level) {
+    // TODO
+    // } else {
+
+    is_hit = _cache_hierarchy_list[0].Get(addr);
+
+    if (!is_hit) {
+        _cache_hierarchy_list[0].Set(addr);
+    }
+
+    // }
+
+    return is_hit;
+}
+
 void Simulator::_Load(const addr_t &addr) {
     ++_counter.access;
     ++_counter.load;
 
-    // if (_multi_level) {
-    //     TODO    
-    // } else {
-    if (_cache_hierarchy_list[0].Get(addr)) {
+    if (_Access(addr)) {
         ++_counter.load_hit;
-    } else {
-        _cache_hierarchy_list[0].Set(addr);
     }
-    // }
 }
 
 void Simulator::_Store(const addr_t &addr) {
     ++_counter.access;
     ++_counter.store;
 
-    // if (_multi_level) {
-    //     TODO
-    // } else {
-    if (_cache_hierarchy_list[0].Get(addr)) {
+    if (_Access(addr)) {
         ++_counter.store_hit;
-    } else {
-        _cache_hierarchy_list[0].Set(addr);
     }
-    // }
 }
 
 void Simulator::DumpResult(const bool &oneline) {
