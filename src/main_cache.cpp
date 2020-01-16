@@ -23,6 +23,10 @@ MainCache::MainCache(const CacheProperty &setting) : BaseCache(setting) {
         property._bit_tag = 32 - property._bit_offset - property._bit_set;
         break;
     }
+
+    for (ulint i = 0; i < property._num_block; i++) {
+        _LRU_priority.push_back(i);
+    }
 }
 
 MainCache::~MainCache() = default;
@@ -105,6 +109,61 @@ void MainCache::_Replace(const addr_t &addr) {
 
 void MainCache::_HitHandle([[maybe_unused]] const addr_t &addr) {
     // # TODO
+
+    ulint idx(0);
+    bool identical(true);
+
+    auto check_ident = [](const ulint &idx, const uint &_bit_tag,
+                          const addr_t &lhs, const addr_t rhs[]) -> bool {
+        for (uint j = 31, k = 28; j > (31 - _bit_tag); j--, k--) {
+            if (lhs[j] != rhs[idx][k]) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    ulint _set_num = _GetSetNumber(addr);
+
+    switch (property.associativity) {
+    case full_associative:
+        for (idx = 0; idx < property._num_block; idx++) {
+            if (_cache[idx][30]) {
+                identical = check_ident(idx, property._bit_tag, addr, _cache);
+                if (identical == true) {
+                    for (ulint i = 0; i < property._num_block; i++) {
+                        if (_LRU_priority[i] == idx) {
+                            _LRU_priority.erase(_LRU_priority.begin() + i);
+                        }
+                    }
+                    _LRU_priority.push_back(idx);
+                }
+            }
+        }
+        break;
+    case set_associative:
+        for (idx = _set_num * property._num_way;
+             idx < (_set_num + 1) * property._num_way; idx++) {
+            if (_cache[idx][30]) {
+                identical = check_ident(idx, property._bit_tag, addr, _cache);
+                if (identical == true) {
+                    for (ulint i = _set_num * property._num_way;
+                         i < (_set_num + 1) * property._num_way; i++) {
+                        if (_LRU_priority[i] == idx) {
+                            _LRU_priority.erase(_LRU_priority.begin() + i);
+                        }
+                    }
+                    _LRU_priority.insert(
+                        _LRU_priority.begin() +
+                            (_set_num + 1) * property._num_way - 1,
+                        idx);
+                }
+            }
+        }
+        break;
+    default:
+        break;
+    }
 }
 
 ulint MainCache::_GetCacheBlockIndex(const addr_t &addr) {
@@ -157,6 +216,26 @@ ulint MainCache::_GetIndexByRandom(const addr_t &addr) {
 ulint MainCache::_GetIndexByLRU([[maybe_unused]] const addr_t &addr) {
     ulint res(0);
     // # TODO
+
+    ulint _set_num = _GetSetNumber(addr);
+
+    switch (property.associativity) {
+    case full_associative:
+        res = _LRU_priority.front();
+        _LRU_priority.erase(_LRU_priority.begin());
+        _LRU_priority.push_back(res);
+        break;
+    case set_associative:
+        res = _LRU_priority[_set_num * property._num_way];
+        _LRU_priority.erase(_LRU_priority.begin() +
+                            _set_num * property._num_way);
+        _LRU_priority.insert(_LRU_priority.begin() +
+                                 (_set_num + 1) * property._num_way - 1,
+                             res);
+        break;
+    default:
+        break;
+    }
     return res;
 }
 
